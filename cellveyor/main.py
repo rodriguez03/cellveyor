@@ -4,11 +4,14 @@ from pathlib import Path
 from typing import Dict, List
 
 import typer
+import platformdirs
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from cellveyor import data, filesystem, report, transfer
+from cellveyor import data, filesystem, report, transfer, linkage  
+from cellveyor import linkage 
+
 
 # create a Typer object to support the command-line interface
 cli = typer.Typer(no_args_is_help=True)
@@ -28,6 +31,7 @@ def display_reports(reports_dict: Dict[str, str]) -> None:
         console.print(Panel(Markdown(current_report), title="Report", expand=False))
         console.print()
 
+creds = None
 
 @cli.command()
 def transport(  # noqa: PLR0913
@@ -48,6 +52,12 @@ def transport(  # noqa: PLR0913
         "--sheet-name",
         "-s",
         help="Name of specific sheet in spreadsheet file",
+    ),
+    save_credentials: bool = typer.Option(
+        False,
+        "--save-credentials",
+        "-sc",
+        help="Save credentials.json file and service account file",
     ),
     key_attribute: str = typer.Option(
         ...,
@@ -146,7 +156,34 @@ def transport(  # noqa: PLR0913
     # if the --transfer flag was enabled then this means
     # that the generated reports should be uploaded to GitHub
     # as a comment inside of the standard pull request
-    if transfer_report:
-        transfer.transfer_reports_to_github(
-            github_token, github_organization, github_repository_prefix, per_key_report
+    if save_credentials:
+        save_credentials_files(creds)
+        if transfer_report:
+            transfer.transfer_reports_to_github(
+                github_token, github_organization, github_repository_prefix, per_key_report
+            )
+
+    # Call fetch_data function directly
+    if save_credentials:
+        fetch_data_function(
+            service_account_file="/path/to/your/service_account.json",
+            spreadsheet_id="YOUR_SPREADSHEET_ID",
         )
+
+def save_credentials_files(creds):
+    destination_directory = platformdirs.user_data_dir("cellveyor")
+
+    # Save credentials.json
+    credentials_path = destination_directory + "/credentials.json"
+    with open(credentials_path, "w") as credentials_file:
+        credentials_file.write(creds.to_json())
+
+    # Save service account file
+    service_account_path = destination_directory + "/service_account.json"
+    with open(service_account_path, "w") as service_account_file:
+        service_account_file.write(creds._service_account_info)
+
+    typer.echo(f"Credentials files saved to {destination_directory}")
+
+if __name__ == "__main__":
+    cli()

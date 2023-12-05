@@ -38,6 +38,7 @@ def fetch_data(
     # Create a dictionary to store DataFrames for each sheet
     dataframes = {}
 
+
     # Iterate through each sheet and fetch the data
     for sheet_name in sheet_names:
         result = (
@@ -61,3 +62,5 @@ def fetch_data(
 
 if __name__ == "__main__":
     typer.run(fetch_data)
+
+
